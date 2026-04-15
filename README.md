@@ -1,4 +1,4 @@
-#MP3 MetaTag
+# MetaTag
 <img width="1200" height="1200" alt="image" src="https://github.com/user-attachments/assets/8a623dbf-b709-4bd0-94af-e5452edfc6f3" />
 
 _«От битмейкеров — битмейкерам»_
