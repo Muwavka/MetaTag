@@ -1,10 +1,4 @@
 using MaterialSkin;
-using MaterialSkin.Controls;
-using MaterialSkin.Properties;
-using MetaTag.Properties;
-using System.Linq;
-using TagLib;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 namespace MetaTag;
 
 public partial class Form1 : Form
@@ -15,8 +9,9 @@ public partial class Form1 : Form
     public string CurrentFilePath;
     public string CurrentImageFilePath;
 
-    private bool _isLightTheme = false;
     System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+
+    TagController tagController = new();
 
     public Form1()
     {
@@ -26,6 +21,14 @@ public partial class Form1 : Form
         ImagePreviewPanel.AllowDrop = true;
         SetRoundedShape(DropPanel, 30);
         SetRoundedShape(ImagePreviewPanel, 10);
+
+        var textBoxes = new[] { TitleTextField, ArtistTextField, AlbumTextField, GenreTextField, YearTextField, TrackNumTextField, CommentTextField, BPMTextField, KeyTextField, TuningForkTextField};
+
+        foreach (var tb in textBoxes)
+        {
+            tb.TextChanged += MarkAsUnsaved;
+            SetRoundedShape(tb, 10);
+        }
 
         materialSkinManager = MaterialSkinManager.Instance;
 
@@ -86,6 +89,8 @@ public partial class Form1 : Form
         if (!e.Data.GetDataPresent(DataFormats.FileDrop))
             return;
 
+        MarkAsUnsaved(null, null);
+
         DropPanel.BackColor = Color.FromArgb(227, 227, 227);
         string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
 
@@ -121,8 +126,7 @@ public partial class Form1 : Form
             FileNameLabel.Text = Path.GetFileName(audioFilePath);
             CurrentFilePath = audioFilePath;
 
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
+            MarkAsUnsaved(null, null);
 
             using (var file = TagLib.File.Create(audioFilePath))
             {
@@ -251,166 +255,30 @@ public partial class Form1 : Form
         e.Effect = DragDropEffects.None;
     }
 
-    private void SaveFileTags(string filePath, string imageFilePath, string title, string artists, string album, string genres, string year, string trackNumber, string bpm, string key, string tune)
-    {
-        try
-        {
-            using (var file = TagLib.File.Create(filePath))
-            {
-                file.Tag.Title = title;
-                file.Tag.Performers = new string[] { artists };
-                file.Tag.Album = album;
-                file.Tag.Genres = new string[] { genres };
-                if (!uint.TryParse(year, out uint fileYear)) { MessageBox.Show($"Ошибка в поле Year", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); fileYear = 0; }
-                file.Tag.Year = fileYear;
-                if (!uint.TryParse(trackNumber, out uint trackCount)) { MessageBox.Show($"Ошибка в поле TrackCount", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); trackCount = 0; }
-                file.Tag.TrackCount = trackCount;
-
-                file.Tag.Comment = "";
-
-                string commentBase = CommentTextField.Text;
-
-                if (!string.IsNullOrEmpty(bpm) && !string.IsNullOrEmpty(key))
-                {
-                    file.Tag.Comment = tune == "440"
-                        ? $"BPM: {bpm}, Key: {key}"
-                        : $"(BPM: {bpm}, Key: {key}, Tuning fork: {tune}) {commentBase}";
-                }
-                else
-                {
-                    file.Tag.Comment = commentBase;
-                }
-
-                if (!string.IsNullOrEmpty(imageFilePath) && System.IO.File.Exists(imageFilePath))
-                {
-                    file.Tag.Pictures = new TagLib.IPicture[] { new TagLib.Picture(imageFilePath) };
-                }
-                else
-                {
-                    Image defaultImg = (Image)resources.GetObject("ImagePreviewPanel.BackgroundImage");
-
-                    if (defaultImg != null)
-                    {
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            defaultImg.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                            byte[] imageBytes = ms.ToArray();
-
-                            TagLib.ByteVector bv = new TagLib.ByteVector(imageBytes);
-
-                            var pic = new TagLib.Id3v2.AttachedPictureFrame
-                            {
-                                Type = TagLib.PictureType.FrontCover,
-                                MimeType = "image/png",
-                                Data = bv
-                            };
-
-                            file.Tag.Pictures = new TagLib.IPicture[] { pic };
-                        }
-                    }
-                }
-                file.Save();
-                SaveLabel.ForeColor = Color.Green;
-                SaveLabel.Text = "Saved";
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-            SaveLabel.ForeColor = Color.Red;
-            SaveLabel.Text = "Unsaved";
-        }
-    }
+    
 
     private void SaveBut_Click(object sender, EventArgs e)
     {
-        SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text);
-    }
-
-    private void TitleTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
+        var saveResult = tagController.SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text, CommentTextField.Text, (Image)resources.GetObject("ImagePreviewPanel.BackgroundImage"));
+        if (saveResult.Success)
         {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
+            MarkAsSaved(null, null);
         }
-    }
-    private void ArtistTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
+        else
         {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void AlbumTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void GenreTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void YearTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void TrackNumTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void CommentTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void BPMTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void KeyTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
-        }
-    }
-    private void TuneTextField_TextChanged(object sender, EventArgs e)
-    {
-        if (SaveLabel.Text.ToLower() == "saved")
-        {
-            SaveLabel.Text = "Unsaved";
-            SaveLabel.ForeColor = Color.Red;
+            MessageBox.Show($"Save error: {saveResult.Message}", "Error",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    private void ThemeToggleButton_Click(object sender, EventArgs e)
+    private void MarkAsUnsaved(object sender, EventArgs e)
     {
-
+        SaveLabel.Text = "Unsaved";
+        SaveLabel.ForeColor = Color.Red;
+    }
+    private void MarkAsSaved(object sender, EventArgs e)
+    {
+        SaveLabel.Text = "Saved";
+        SaveLabel.ForeColor = Color.Green;
     }
 }

@@ -160,7 +160,6 @@
             TitleTextField.UseAccent = false;
             TitleTextField.UseSystemPasswordChar = false;
             TitleTextField.UseTallSize = false;
-            TitleTextField.TextChanged += TitleTextField_TextChanged;
             // 
             // label1
             // 
@@ -212,7 +211,6 @@
             ArtistTextField.UseAccent = false;
             ArtistTextField.UseSystemPasswordChar = false;
             ArtistTextField.UseTallSize = false;
-            ArtistTextField.TextChanged += ArtistTextField_TextChanged;
             // 
             // label3
             // 
@@ -254,7 +252,6 @@
             BPMTextField.UseAccent = false;
             BPMTextField.UseSystemPasswordChar = false;
             BPMTextField.UseTallSize = false;
-            BPMTextField.TextChanged += BPMTextField_TextChanged;
             // 
             // FileNameLabel
             // 
@@ -330,7 +327,6 @@
             TuningForkTextField.UseAccent = false;
             TuningForkTextField.UseSystemPasswordChar = false;
             TuningForkTextField.UseTallSize = false;
-            TuningForkTextField.TextChanged += TuneTextField_TextChanged;
             // 
             // label5
             // 
@@ -373,7 +369,6 @@
             YearTextField.UseAccent = false;
             YearTextField.UseSystemPasswordChar = false;
             YearTextField.UseTallSize = false;
-            YearTextField.TextChanged += YearTextField_TextChanged;
             // 
             // label6
             // 
@@ -415,7 +410,6 @@
             KeyTextField.UseAccent = false;
             KeyTextField.UseSystemPasswordChar = false;
             KeyTextField.UseTallSize = false;
-            KeyTextField.TextChanged += KeyTextField_TextChanged;
             // 
             // label7
             // 
@@ -457,7 +451,6 @@
             AlbumTextField.UseAccent = false;
             AlbumTextField.UseSystemPasswordChar = false;
             AlbumTextField.UseTallSize = false;
-            AlbumTextField.TextChanged += AlbumTextField_TextChanged;
             // 
             // label8
             // 
@@ -499,7 +492,6 @@
             GenreTextField.UseAccent = false;
             GenreTextField.UseSystemPasswordChar = false;
             GenreTextField.UseTallSize = false;
-            GenreTextField.TextChanged += GenreTextField_TextChanged;
             // 
             // label9
             // 
@@ -541,7 +533,6 @@
             TrackNumTextField.UseAccent = false;
             TrackNumTextField.UseSystemPasswordChar = false;
             TrackNumTextField.UseTallSize = false;
-            TrackNumTextField.TextChanged += TrackNumTextField_TextChanged;
             // 
             // groupBox1
             // 
@@ -592,7 +583,6 @@
             CommentTextField.UseAccent = false;
             CommentTextField.UseSystemPasswordChar = false;
             CommentTextField.UseTallSize = false;
-            CommentTextField.TextChanged += CommentTextField_TextChanged;
             // 
             // SaveLabel
             // 
