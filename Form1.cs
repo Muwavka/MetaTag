@@ -8,6 +8,7 @@ public partial class Form1 : Form
     private string[] supportedImageExtensions = new string[] { "jpg", "jpeg", "png", "bmp", "gif" };
     public string CurrentFilePath;
     public string CurrentImageFilePath;
+    public Image imageFile;
 
     System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
 
@@ -52,7 +53,7 @@ public partial class Form1 : Form
     private void PlusBpmLabelBut_Click_1(object sender, EventArgs e)
     {
         try
-        {
+        {   
             int currentBpmInField = int.Parse(BPMTextField.Text);
             BPMTextField.Text = $"{++currentBpmInField}";
         }
@@ -109,14 +110,14 @@ public partial class Form1 : Form
 
             try
             {
-                Image img = Image.FromFile(imageFilePath);
-                ImagePreviewPanel.BackgroundImage = img;
+                imageFile = Image.FromFile(imageFilePath);
+                ImagePreviewPanel.BackgroundImage = imageFile;
                 ImagePreviewPanel.BackgroundImageLayout = ImageLayout.Zoom;
                 CurrentImageFilePath = imageFilePath;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка загрузки изображения: {ex.Message}", "Ошибка",
+                MessageBox.Show($"Error loading image:: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -128,22 +129,11 @@ public partial class Form1 : Form
 
             MarkAsUnsaved(null, null);
 
-            using (var file = TagLib.File.Create(audioFilePath))
-            {
-                SetTagsLabels(
-                    file.Tag.Title,
-                    file.Tag.Performers,
-                    file.Tag.Album,
-                    file.Tag.Genres,
-                    file.Tag.Year.ToString(),
-                    file.Tag.TrackCount.ToString(),
-                    file.Tag.Comment
-                );
-                SetBackgroundFromTag(file);
-            }
+            SetTagsLabels(tagController.LoadTagData(CurrentFilePath));
         }
         else if (!string.IsNullOrEmpty(imageFilePath))
         {
+
         }
         else
         {
@@ -154,43 +144,37 @@ public partial class Form1 : Form
         }
     }
 
-    private void SetTagsLabels(string title, string[] artists, string album, string[] genres, string year, string trackNumber, string comment)
+    private void SetTagsLabels(TagController.TagData data)
     {
         string artistCombinedString = "";
         string genreCombinedString = "";
-        foreach (string artist in artists)
-        {
-            artistCombinedString += $"{artist}";
-        }
 
-        foreach (string genre in genres)
-        {
-            genreCombinedString += $"{genre}";
-        }
+        artistCombinedString = string.Join(",", data.Performers);
+        genreCombinedString = string.Join(",", data.Genres);
 
-        TitleTextField.Text = title;
+        TitleTextField.Text = data.Title;
         ArtistTextField.Text = artistCombinedString;
-        AlbumTextField.Text = album;
+        AlbumTextField.Text = data.Album;
         GenreTextField.Text = genreCombinedString;
-        YearTextField.Text = year;
-        TrackNumTextField.Text = trackNumber;
-        CommentTextField.Text = comment;
+        YearTextField.Text = data.Year;
+        TrackNumTextField.Text = data.TrackCount;
+        CommentTextField.Text = data.Comment;
+        BPMTextField.Text = data.BPM;
+        KeyTextField.Text = data.Key;
+        TuningForkTextField.Text = data.Tune;
+
+        SetBackgroundFromTag(data);
     }
 
-    public void SetBackgroundFromTag(TagLib.File file)
+    private void SetBackgroundFromTag(TagController.TagData data)
     {
-        if (file.Tag.Pictures.Length > 0)
+        if (ImagePreviewPanel.BackgroundImage?.Tag?.ToString() != "Resource")
         {
-            var bin = file.Tag.Pictures[0].Data.Data;
-
-            using (MemoryStream ms = new MemoryStream(bin))
-            {
-                ImagePreviewPanel.BackgroundImage?.Dispose();
-
-                ImagePreviewPanel.BackgroundImage = Image.FromStream(ms);
-                ImagePreviewPanel.BackgroundImageLayout = ImageLayout.Zoom;
-            }
+            ImagePreviewPanel.BackgroundImage?.Dispose();
         }
+
+        ImagePreviewPanel.BackgroundImage = data.CoverImage;
+        ImagePreviewPanel.BackgroundImageLayout = ImageLayout.Zoom;
     }
 
     private void ImagePreviewPanel_DragDrop(object sender, DragEventArgs e)
@@ -226,14 +210,14 @@ public partial class Form1 : Form
 
         try
         {
-            Image img = Image.FromFile(imagePath);
-            ImagePreviewPanel.BackgroundImage = img;
+            imageFile = Image.FromFile(imagePath);
+            ImagePreviewPanel.BackgroundImage = imageFile;
             ImagePreviewPanel.BackgroundImageLayout = ImageLayout.Zoom;
             CurrentImageFilePath = imagePath;
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Не удалось загрузить изображение: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"Failed to load image:: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -258,8 +242,21 @@ public partial class Form1 : Form
     
 
     private void SaveBut_Click(object sender, EventArgs e)
-    {
-        var saveResult = tagController.SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text, CommentTextField.Text, (Image)resources.GetObject("ImagePreviewPanel.BackgroundImage"));
+    {   
+        if (string.IsNullOrEmpty(CurrentFilePath)) 
+        { MessageBox.Show($"Please load a file first", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+
+        TagController.SaveResult saveResult = new(false, string.Empty);
+        if (ImagePreviewPanel.BackgroundImage?.Tag?.ToString() == "Resource")
+        {
+            saveResult = tagController.SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text, CommentTextField.Text, (Image)resources.GetObject("ImagePreviewPanel.BackgroundImage"));
+        }
+        else
+        {   
+            if (imageFile != null) saveResult = tagController.SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text, CommentTextField.Text, imageFile);
+            else saveResult = tagController.SaveFileTags(CurrentFilePath, CurrentImageFilePath, TitleTextField.Text, ArtistTextField.Text, AlbumTextField.Text, GenreTextField.Text, YearTextField.Text, TrackNumTextField.Text, BPMTextField.Text, KeyTextField.Text, TuningForkTextField.Text, CommentTextField.Text, ImagePreviewPanel.BackgroundImage);
+        }
+        
         if (saveResult.Success)
         {
             MarkAsSaved(null, null);
